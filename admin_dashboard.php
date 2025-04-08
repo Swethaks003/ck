@@ -10,102 +10,148 @@ $conn = new mysqli("localhost", "root", "", "ck");
 if ($conn->connect_error) {
     die("Database Connection Failed: " . $conn->connect_error);
 }
+
+// Filter dishes by date (optional)
+$filter_date = isset($_POST['filter_date']) ? $_POST['filter_date'] : '';
+$filter_query = "SELECT * FROM menu";
+if (!empty($filter_date)) {
+    $filter_query .= " WHERE date_added = '$filter_date'";
+}
+$result = $conn->query($filter_query);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #f8f9fa;
             margin: 0;
-            padding: 20px;
+            font-family: 'Segoe UI', sans-serif;
+            background: 
+            linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0.1) 100%),
+            url('https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=1450&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #fff;
         }
+
         .container {
-            max-width: 800px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            margin: 40px auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(0,0,0,0.3);
+            backdrop-filter:blur(5px);/* the background blurrness of the container */
         }
-        h2 {
+
+        h2, h3 {
             text-align: center;
-            color: #333;
+            margin: 20px 0;
+            color: #fff;
         }
+
         .logout-btn {
-            display: block;
             text-align: right;
-            margin-bottom: 10px;
         }
+
         .logout-btn a {
-            background: #dc3545;
+            background: #ff4b5c;
             color: white;
             padding: 10px 15px;
             text-decoration: none;
-            border-radius: 5px;
+            border-radius: 8px;
+            transition: background 0.3s ease;
         }
+
         .logout-btn a:hover {
-            background: #b02a37;
+            background: #e63946;
         }
+
         .form-group {
             margin-bottom: 15px;
         }
+
         label {
             font-weight: bold;
             display: block;
             margin-bottom: 5px;
+            color: #fff;
         }
-        input, textarea {
+
+        input, select, textarea {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            padding: 10px 15px;
+            border-radius: 8px;
             border: none;
+            outline: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            transition: background 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        button {
+            background: #00b4d8;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            color: white;
             cursor: pointer;
-            border-radius: 5px;
+            transition: background 0.3s ease;
         }
-        button:hover {
-            background: #0056b3;
-        }
+
+       
         table {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 25px;
+            border-collapse: separate;
+            background: rgba(80, 80, 71, 0.3);
+            background-color: rgba(17, 17, 17, 0.8);
+            box-shadow: 0 0 10px rgba(0,0,0,0.2); 
         }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
+
         th, td {
             padding: 10px;
+            border: 1px solid #ddd;
             text-align: left;
+            color: #fff;
+            transition: background 0.3s ease;
         }
+
         th {
-            background: #007bff;
-            color: white;
+            background: rgba(0, 180, 216, 0.8);
         }
+
+        tr:hover {
+            background: rgba(0, 255, 255, 0.3);
+        }
+
         .delete-btn {
-            background: #dc3545;
-            color: white;
+            background: #ff4b5c;
             padding: 5px 10px;
-            text-decoration: none;
             border-radius: 5px;
-            display: inline-block;
+            color: white;
+            text-decoration: none;
+            transition: background 0.3s ease;
         }
+
         .delete-btn:hover {
-            background: #b02a37;
+            background: #c92a2a;
+        }
+
+        .filter-form {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
 <body>
 
@@ -115,23 +161,19 @@ if ($conn->connect_error) {
         <a href="logout.php">Logout</a>
     </div>
 
-    <!-- Add Dish Form -->
-    <h3>Add a New Dish</h3>
-    <form action="add_dish.php" method="POST">
+    <h3>Add New Dish</h3>
+    <form action="add_dish.php" method="POST" enctype="multipart/form-data">
         <div class="form-group">
             <label>Dish Name</label>
             <input type="text" name="dish_name" required>
-            <i class="fa fa-utensils"></i>
         </div>
         <div class="form-group">
             <label>Description</label>
             <textarea name="description" required></textarea>
-            <i class="fa fa-file-alt"></i>
         </div>
         <div class="form-group">
             <label>Price</label>
             <input type="number" name="price" required>
-            <i class="fa fa-indian-rupee-sign"></i>
         </div>
         <div class="form-group">
             <label>Category</label>
@@ -141,10 +183,23 @@ if ($conn->connect_error) {
                 <option value="Dinner">Dinner</option>
             </select>
         </div>
+
+        <div class="form-group">
+            <label>Image Upload</label>
+            <input type="file" name="image_file">
+            <p>OR</p>
+            <label>Image URL</label>
+            <input type="text" name="image_url" placeholder="https://example.com/image.jpg">
+        </div>
+        
+            <a href="menu.php" target="_blank" style="background:rgb(103, 165, 28); color: white; padding: 10px 15px; text-decoration: none; border-radius: 8px; transition: background 0.3s ease;">Go to Menu</a>
+        </div>
+
+
+        
         <button type="submit">Add Dish</button>
     </form>
 
-    <!-- Dish List -->
     <h3>Dish List</h3>
     <table>
         <thead>
@@ -154,33 +209,35 @@ if ($conn->connect_error) {
                 <th>Description</th>
                 <th>Price</th>
                 <th>Category</th>
+                <th>Image</th>
                 <th>Action</th>
             </tr>
         </thead>
         <tbody>
-            <?php
-            $query = "SELECT * FROM menu";
-            $result = $conn->query($query);
-
-            while ($row = $result->fetch_assoc()) {
-                echo "<tr>
-                        <td>{$row['id']}</td>
-                        <td>{$row['dish_name']}</td>
-                        <td>{$row['description']}</td>
-                        <td>{$row['price']}</td>
-                        <td>{$row['category']}</td>
-                        <td>
-                            <a href='delete_dish.php?id={$row['id']}' class='delete-btn'
-                               onclick='return confirm(\"Are you sure you want to delete this dish?\")'>
-                               Delete
-                            </a>
-                        </td>
-                      </tr>";
-            }
-            ?>
+            <?php while ($row = $result->fetch_assoc()): ?>
+                <tr>
+                    <td><?= $row['id']; ?></td>
+                    <td><?= htmlspecialchars($row['dish_name']); ?></td>
+                    <td><?= htmlspecialchars($row['description']); ?></td>
+                    <td>₹<?= $row['price']; ?></td>
+                    <td><?= htmlspecialchars($row['category']); ?></td>
+                    <td>
+                        <?php if (!empty($row['image_path'])): ?>
+                            <img src="<?= htmlspecialchars($row['image_path']); ?>" alt="<?= htmlspecialchars($row['dish_name']); ?>" style="width: 50px; height: 50px; object-fit: cover;">
+                        <?php else: ?>
+                            No Image
+                        <?php endif; ?>
+                     </td>
+                    <td>
+                    
+                        <a href="delete_dish.php?id=<?= $row['id']; ?>" class="delete-btn" onclick="return confirm('Delete this dish?')">Delete</a>
+                    </td>
+                </tr>
+            <?php endwhile; ?>
         </tbody>
     </table>
 </div>
+
 
 </body>
 </html>
